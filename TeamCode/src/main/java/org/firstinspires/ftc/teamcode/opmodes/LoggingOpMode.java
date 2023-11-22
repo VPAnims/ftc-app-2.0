@@ -20,4 +20,8 @@ public abstract class LoggingOpMode extends OpMode
         Logger.close();
         Robot.close();
     }
+
+    public abstract void Start();
+
+    public abstract void Stop();
 }

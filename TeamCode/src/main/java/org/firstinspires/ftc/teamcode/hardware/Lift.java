@@ -1,173 +1,149 @@
-package org.firstinspires.ftc.teamcode.hardware;
+/*package org.firstinspires.ftc.teamcode.hardware;
 
 import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.Servo;
 
 public class Lift {
+    //2 Motors
+    //3 Preset Heights (can be fine adjusted to move up and down)
+    //D1: High: Y; Medium: B; Low: A;
+    //Fine Adjust: D2 Joystick
+    private DcMotorEx left;
+    private DcMotorEx right;
+    private double targetPos;
 
-    // (0,115) xy cord of starting point positive is direction with the rev hubs
-    // (400,820) High Goal Position
-    //xy is millimeters
-    // Arm1 is 488.89580 mm
-    // Arm2 is 424.15230 mm
-
-    private final DcMotor arm_lower;
-    private final DcMotor arm_upper;
-    private final DcMotor wrist;
-
-    private final double ARM_LOWER_LENGTH = 488.89580;
-    private final double ARM_UPPER_LENGTH = 424.15230;
-
-//    private final double DEGREES_PER_TICK = 0.0279;
-
-    private double x = 0;
-    private double y = 115;
-
-
-    public Lift(DcMotor arm_lower, DcMotor arm_upper, DcMotor wrist) {
-        this.arm_lower = arm_lower;
-        this.arm_upper = arm_upper;
-        this.wrist = wrist;
+    public Lift(DcMotorEx left, DcMotorEx right){
+        this.left = left;
+        this.right = right;
+    }
+    public void setTarget(double pos){
+        targetPos = pos;
+    }
+    public double getTarget(){
+        return targetPos;
+    }
+    public void setLiftPos(double pos){
+        left.setPower(pos);
+        right.setPower(-pos);
+    }
+    public double getLeftPos(){
+        return left.getCurrentPosition();
+    }
+    public double getRightPos(){
+        return right.getCurrentPosition();
     }
 
-    public void setCoordinates(double set_x, double set_y) {
-        x = set_x;
-        y = set_y;
+}*/
+package org.firstinspires.ftc.teamcode.hardware;
+import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.DcMotorEx;
+import com.qualcomm.robotcore.hardware.DcMotorSimple;
+import com.qualcomm.robotcore.hardware.DigitalChannel;
+import com.qualcomm.robotcore.hardware.DistanceSensor;
+import com.qualcomm.robotcore.hardware.Servo;
+import com.qualcomm.robotcore.hardware.ServoImplEx;
+
+import org.firstinspires.ftc.robotcore.external.navigation.CurrentUnit;
+import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
+
+public class Lift {
+
+    private final DcMotorEx lift_left;
+    private final DcMotorEx lift_right;
+    private final DigitalChannel lift_limit;
+    private final Servo holder;
+    private final ServoImplEx latch;
+    private final DistanceSensor pole_sensor;
+    private double lift_position;
+    private double lift1Target;
+    private boolean old_state = true;
+    private double pole_distance;
+
+    public Lift(DcMotorEx lift_left, DcMotorEx lift_right, DigitalChannel lift_limit, Servo holder, ServoImplEx latch, DistanceSensor pole_sensor){
+        this.lift_left = lift_left;
+        this.lift_right = lift_right;
+        this.lift_limit = lift_limit;
+        this.holder = holder;
+        this.latch = latch;
+        this.pole_sensor = pole_sensor;
+
+//        lift_right.setDirection(DcMotorSimple.Direction.REVERSE);
     }
 
-
-    public void setLiftPower(double arm_low_pow, double arm_up_pow, double wrist_pow) {
-        arm_lower.setPower(arm_low_pow);
-        arm_upper.setPower(arm_up_pow);
-        wrist.setPower(wrist_pow);
+    public void update() {
+        lift_position = lift_left.getCurrentPosition() * (5.23 / 3.7);
+        pole_distance = pole_sensor.getDistance(DistanceUnit.MM);
     }
 
-
-    public double[] getEncoderValue() {
-        double[] a = new double[3];
-
-        a[0] = arm_lower.getCurrentPosition();
-        a[1] = arm_upper.getCurrentPosition();
-        a[2] = wrist.getCurrentPosition();
-
-        return a;
+    public void setLiftTarget(double pos){
+        lift1Target = pos;
     }
 
-    public void resetLiftEncoder() {
-        arm_lower.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        arm_upper.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        wrist.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        arm_lower.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-        arm_upper.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-        wrist.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+    public double getLiftTarget(){
+        return lift1Target;
     }
 
-    public double[] get_POI(double l1, double l2, double a, double b) {
-        double[] cords = new double[4];
+    public double getPoleDistance() {
+        return pole_distance;
+    }
 
-        double dist = Math.sqrt(Math.pow(a, 2) + Math.pow(b, 2));
-        if ((dist > l1 + l2) || (dist < Math.abs(l1 - l2))) {
-            cords[0] = 0;
-            cords[1] = 0;
-            cords[2] = 0;
-            cords[3] = 0;
-            return cords;
+    public void setPower(double pow){
+        lift_left.setPower(pow);
+        lift_right.setPower(-pow);
+    }
+
+    public void resetEncoders() {
+        lift_left.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        lift_right.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+
+        lift_left.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        lift_right.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+    }
+
+    public double getCurrentPosition() {
+        return lift_position;
+    }
+
+    public boolean getLimit(){
+        return !lift_limit.getState();
+    }
+
+    public void setHolderPosition (double pos) {
+        holder.setPosition(pos);
+    }
+
+    public double getHolderPosition() {
+        return holder.getPosition();
+    }
+
+    public void setLatchPosition(double pos) {
+        latch.setPosition(pos);
+    }
+
+    public double getLatchPosition() {
+        return latch.getPosition();
+    }
+
+    public void setHolderState(boolean on){
+        if (on != old_state) { //if the state changed
+            if (on) {
+                holder.setPosition(holder.getPosition());
+            }
+            old_state = on;
         }
-        if (b == 0) {
-            double x = (Math.pow(a, 2) + Math.pow(l1, 2) - Math.pow(l2, 2)) / (2 * a);
-            double y = Math.sqrt(Math.pow(l1, 2) - Math.pow(x, 2));
-            cords[0] = x;
-            cords[1] = y;
-            cords[2] = x;
-            cords[3] = -y;
-            return cords;
-        } else {
-            double L = (Math.pow(a, 2) + Math.pow(b, 2) + Math.pow(l1, 2) - Math.pow(l2, 2)) / (2 * b);
-            double A = (1 + (Math.pow(a, 2) / Math.pow(b, 2)));
-            double B = (-2 * a * L) / b;
-            double C = Math.pow(L, 2) - Math.pow(l1, 2);
-            double D = Math.sqrt(Math.pow(B, 2) - (4 * A * C));
-            double x1 = (-B + D) / (2 * A);
-            double x2 = (-B - D) / (2 * A);
-            double y1 = (-a / b) * x1 + L;
-            double y2 = (-a / b) * x2 + L;
-            cords[0] = x1;
-            cords[1] = y1;
-            cords[2] = x2;
-            cords[3] = y2;
-            return cords;
-        }
-    }
-
-    public double get_qangle(double x, double y) {
-        double deg = Math.toDegrees(Math.atan(Math.abs(y) / Math.abs(x)));
-        if (x < 0) {
-            deg += 2 * (90 - deg);
-        }
-        if (y < 0) {
-            deg *= -1;
-        }
-        return deg;
-    }
-
-    public double get_min_diff(double a, double b) {
-        double q = Math.abs(get_pos_angle(a) - get_pos_angle(b));
-        double w = Math.abs(a - b);
-        return Math.min(q, w);
-    }
-
-
-    public double[] get_ang(double l1, double l2, double a, double b, double cural, double curbe) {
-        double[] all_angles = new double[2];
-        if (a == 0 && b == 0) {
-            all_angles[0] = cural;
-            all_angles[1] = -(180 - cural);
-            return all_angles;
-        }
-        double[] points = get_POI(l1, l2, a, b);
-
-        double x1 = points[0];
-        double y1 = points[1];
-        double x2 = points[2];
-        double y2 = points[3];
-
-        double a1 = get_qangle(x1, y1);
-        double b1 = get_qangle(a - x1, b - y1);
-
-         if ((Math.abs(a1 - b1) > 180)) { // for arms not intersecting
-             b1 = b1 + 360;
-         }
-
-        double a2 = get_qangle(x2, y2);
-        double b2 = get_qangle(a - x2, b - y2);
-
-         if ((Math.abs(-a2 + b2) > 180)) { // for arms not intersecting
-             b2 = b2 - 360;
-         }
-
-        double diff1 = get_min_diff(cural, a1) + get_min_diff(curbe, b1);
-        double diff2 = get_min_diff(cural, a2) + get_min_diff(curbe, b2);
-
-
-        if ((diff1 < diff2)) {
-            all_angles[0] = a1;
-            all_angles[1] = b1;
-            return all_angles;
-        } else {
-            all_angles[0] = a2;
-            all_angles[1] = b2;
-            return all_angles;
+        if (!on) {
+            holder.setPosition(0);
         }
     }
 
-
-    public double get_pos_angle(double angle) {
-        if (angle < 0) {
-            return 360 + angle;
-        } else {
-            return angle;
-        }
+    public double getPower() {
+        return lift_right.getPower();
     }
 
+    public double getCurrentAmps() {
+        return lift_right.getCurrent(CurrentUnit.AMPS);
+    }
 
 }
+
